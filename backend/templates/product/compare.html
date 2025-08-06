@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Compare Laptops</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f5f5f5;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+
+        canvas {
+            max-width: 700px;
+            margin: 40px auto;
+            display: block;
+            opacity: 0;
+            transition: opacity 0.8s ease-in-out;
+        }
+
+        h3 {
+            text-align: center;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Compare Two Laptops (<a href="{% url 'product:home' %}">Back to Laptop List</a>)</h2>
+
+
+    <table>
+        <tr>
+            <th>Feature</th>
+            <th>{{ product1.name }}</th>
+            <th>{{ product2.name }}</th>
+        </tr>
+        <tr>
+            <td>Price</td>
+            <td>${{ product1.price }}</td>
+            <td>${{ product2.price }}</td>
+        </tr>
+        <tr>
+            <td>Discounted Price</td>
+            <td>${{ product1.discounted_price }}</td>
+            <td>${{ product2.discounted_price }}</td>
+        </tr>
+        <tr>
+            <td>RAM</td>
+            <td>{{ product1.ram }} GB</td>
+            <td>{{ product2.ram }} GB</td>
+        </tr>
+        <tr>
+            <td>Battery</td>
+            <td>{{ product1.battery_capacity }} mAh</td>
+            <td>{{ product2.battery_capacity }} mAh</td>
+        </tr>
+        <tr>
+            <td>Storage</td>
+            <td>{{ product1.storage }} GB</td>
+            <td>{{ product2.storage }} GB</td>
+        </tr>
+        <tr>
+            <td>CPU Score</td>
+            <td>{{ product1.cpu_score }}</td>
+            <td>{{ product2.cpu_score }}</td>
+        </tr>
+    </table>
+
+    <!-- RAM - Bar Chart -->
+    <h3>RAM Comparison</h3>
+    <canvas id="ramChart"></canvas>
+
+    <!-- Battery - Line Chart -->
+    <h3>Battery Comparison</h3>
+    <canvas id="batteryChart"></canvas>
+
+    <!-- Storage - Pie Chart -->
+    <h3>Storage Comparison</h3>
+    <canvas id="storageChart"></canvas>
+
+    <!-- CPU Score - Polar Area Chart -->
+    <h3>CPU Score Comparison</h3>
+    <canvas id="cpuChart"></canvas>
+
+    <script>
+        function revealChart(id, config) {
+            const canvas = document.getElementById(id);
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        canvas.style.opacity = 1;
+                        new Chart(canvas, config);
+                        observer.unobserve(canvas);
+                    }
+                });
+            }, { threshold: 0.5 });
+
+            observer.observe(canvas);
+        }
+
+        // RAM - Bar Chart
+        revealChart('ramChart', {
+            type: 'bar',
+            data: {
+                labels: ['{{ product1.name }}', '{{ product2.name }}'],
+                datasets: [{
+                    label: 'RAM (GB)',
+                    data: [{{ product1.ram }}, {{ product2.ram }}],
+                    backgroundColor: ['#4e79a7', '#f28e2b']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: { display: true, text: 'RAM Comparison' }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutBounce'
+                }
+            }
+        });
+
+        // Battery - Line Chart
+        revealChart('batteryChart', {
+            type: 'line',
+            data: {
+                labels: ['{{ product1.name }}', '{{ product2.name }}'],
+                datasets: [{
+                    label: 'Battery (mAh)',
+                    data: [{{ product1.battery_capacity }}, {{ product2.battery_capacity }}],
+                    borderColor: '#59a14f',
+                    fill: false,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: { display: true, text: 'Battery Capacity Comparison' }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+
+        // Storage - Pie Chart
+        revealChart('storageChart', {
+            type: 'pie',
+            data: {
+                labels: ['{{ product1.name }}', '{{ product2.name }}'],
+                datasets: [{
+                    label: 'Storage (GB)',
+                    data: [{{ product1.storage }}, {{ product2.storage }}],
+                    backgroundColor: ['#e15759', '#76b7b2']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: { display: true, text: 'Storage Distribution' }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutCirc'
+                }
+            }
+        });
+
+        // CPU Score - Polar Area Chart
+        revealChart('cpuChart', {
+            type: 'polarArea',
+            data: {
+                labels: ['{{ product1.name }}', '{{ product2.name }}'],
+                datasets: [{
+                    label: 'CPU Score',
+                    data: [{{ product1.cpu_score }}, {{ product2.cpu_score }}],
+                    backgroundColor: ['#edc948', '#b07aa1']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: { display: true, text: 'CPU Performance Comparison' }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutElastic'
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>

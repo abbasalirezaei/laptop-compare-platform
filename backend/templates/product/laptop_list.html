@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laptop Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .range-track {
+            position: relative;
+            height: 4px;
+            background-color: #ddd;
+            border-radius: 3px;
+        }
+
+        .range-highlight {
+            position: absolute;
+            height: 4px;
+            background-color: #0d6efd;
+            border-radius: 3px;
+        }
+
+        .range-value {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <h1 class="mb-4">Laptop List</h1>
+
+        <!-- Search & Filter Form -->
+        <form method="GET" action="" class="card p-4 mb-4 shadow-sm">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="brand" class="form-label">Brand</label>
+                    <input type="text" name="brand" id="brand" class="form-control" value="{{ request.GET.brand }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="search_query" class="form-label">Search by Name</label>
+                    <input type="text" name="search_query" id="search_query" class="form-control" value="{{ request.GET.search_query }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="start_date" class="form-label">Created After</label>
+                    <input type="date" name="start_date" id="start_date" class="form-control" value="{{ request.GET.start_date }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="end_date" class="form-label">Created Before</label>
+                    <input type="date" name="end_date" id="end_date" class="form-control" value="{{ request.GET.end_date }}">
+                </div>
+
+                <!-- Price Range -->
+                <div class="col-md-12">
+                    <label class="form-label">Price Range</label>
+                    <div class="d-flex align-items-center gap-3">
+                        <input type="range" name="price_gte" id="price_gte"
+                            min="{{ price__min }}" max="{{ price__max }}"
+                            value="{{ request.GET.price_gte|default:price__min }}" class="form-range">
+                        <input type="range" name="price_lte" id="price_lte"
+                            min="{{ price__min }}" max="{{ price__max }}"
+                            value="{{ request.GET.price_lte|default:price__max }}" class="form-range">
+                        <span class="range-value" id="range-value">
+                            ${{ request.GET.price_gte|default:price__min }} – ${{ request.GET.price_lte|default:price__max }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Extra Filters -->
+                <div class="col-md-3">
+                    <label for="ram_min" class="form-label">Min RAM (GB)</label>
+                    <input type="number" name="ram_min" id="ram_min" class="form-control" value="{{ request.GET.ram_min }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="storage_min" class="form-label">Min Storage (GB)</label>
+                    <input type="number" name="storage_min" id="storage_min" class="form-control" value="{{ request.GET.storage_min }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="cpu_score_min" class="form-label">Min CPU Score</label>
+                    <input type="number" name="cpu_score_min" id="cpu_score_min" class="form-control" value="{{ request.GET.cpu_score_min }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="screen_size_min" class="form-label">Min Screen Size (inches)</label>
+                    <input type="number" step="0.1" name="screen_size_min" id="screen_size_min" class="form-control" value="{{ request.GET.screen_size_min }}">
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+
+        <!-- Laptop List -->
+        <div class="card p-4 shadow-sm">
+            <h2 class="mb-3">Results</h2>
+            <ul class="list-group">
+                {% for laptop in laptops %}
+                <li class="list-group-item">
+                    <strong>{{ laptop.name }}</strong> - ${{ laptop.price }}<br>
+                    Brand: {{ laptop.brand }} | RAM: {{ laptop.ram }}GB | Storage: {{ laptop.storage }}GB |
+                    CPU: {{ laptop.cpu_model }} ({{ laptop.cpu_score }}) | Screen: {{ laptop.screen_size }}” |
+                    Battery: {{ laptop.battery_capacity }}mAh
+                </li>
+                {% endfor %}
+                {% if not laptops %}
+                <li class="list-group-item text-danger">No laptops found.</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <!-- Compare Form -->
+        <div class="card p-4 mt-4 shadow-sm">
+            <h2 class="mb-3">Compare Two Laptops</h2>
+            <form method="get" action="{% url 'product:compare-products' %}">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="id1" class="form-label">Laptop 1</label>
+                        <select name="id1" class="form-select" required>
+                            {% for laptop in laptops %}
+                                <option value="{{ laptop.id }}">{{ laptop.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="id2" class="form-label">Laptop 2</label>
+                        <select name="id2" class="form-select" required>
+                            {% for laptop in laptops %}
+                                <option value="{{ laptop.id }}">{{ laptop.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-success">Compare</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Range Script -->
+    <script>
+        const minSlider = document.getElementById("price_gte");
+        const maxSlider = document.getElementById("price_lte");
+        const rangeValue = document.getElementById("range-value");
+
+        function updateRange() {
+            const minVal = parseInt(minSlider.value);
+            const maxVal = parseInt(maxSlider.value);
+            rangeValue.textContent = `$${minVal} – $${maxVal}`;
+        }
+
+        minSlider.addEventListener("input", updateRange);
+        maxSlider.addEventListener("input", updateRange);
+        updateRange();
+    </script>
+</body>
+</html>
