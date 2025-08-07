@@ -1,9 +1,13 @@
 from django.shortcuts import render
-from django.db.models import Q, Max, Min, Count, Avg    
+from django.db.models import Q, Max, Min, Count, Avg
 from django.http import HttpResponse, HttpResponseBadRequest
-from .models import Laptop
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
 from django.utils.dateparse import parse_date
-from django.shortcuts import get_object_or_404
+
+from .models import Laptop
+from .forms import LaptopCommentForm
 
 def laptop_list_view(request):
     brand = request.GET.get('brand')
@@ -50,7 +54,8 @@ def laptop_list_view(request):
 
     laptops = Laptop.objects.filter(q).order_by('-created_at')
     sort_by = request.GET.get('sort_by', 'price')
-    valid_sort_fields = ['price', '-price', 'ram', '-ram', 'cpu_score', '-cpu_score', 'created_at', '-created_at']
+    valid_sort_fields = ['price', '-price', 'ram', '-ram',
+                         'cpu_score', '-cpu_score', 'created_at', '-created_at']
 
     if sort_by in valid_sort_fields:
         laptops = laptops.order_by(sort_by)
@@ -107,22 +112,6 @@ def compare_laptops_view(request):
     return render(request, 'product/compare.html', comparison_data)
 
 
-
-from django.shortcuts import render, get_object_or_404
-from .models import Laptop, LaptopComment, LaptopPriceHistory
-
-def laptop_detail_view(request, pk):
-    laptop = get_object_or_404(Laptop, pk=pk)
-    comments = laptop.comments.select_related('user').order_by('-created_at')
-    price_history = laptop.price_history.order_by('recorded_at')
-
-    context = {
-        'laptop': laptop,
-        'comments': comments,
-        'price_history': price_history,
-    }
-    return render(request, 'product/laptop_detail.html', context)
-
 def admin_dashboard_view(request):
     # Number of laptops by brand
     brand_stats = (
@@ -150,3 +139,40 @@ def admin_dashboard_view(request):
         'popular_laptops': popular_laptops,
     }
     return render(request, 'product/admin/dashboard.html', context)
+
+
+@login_required
+def laptop_detail_view(request, pk):
+    laptop = get_object_or_404(Laptop, pk=pk)
+    comments = laptop.comments.select_related('user').order_by('-created_at')
+    price_history = laptop.price_history.order_by('recorded_at')
+
+    # تحلیل تعداد کامنت‌ها در زمان
+    comment_stats = (
+        laptop.comments
+        .extra({'date': "date(created_at)"})
+        .values('date')
+        .annotate(count=Count('id'))
+        .order_by('date')
+    )
+
+    # فرم ارسال کامنت
+    if request.method == 'POST':
+        form = LaptopCommentForm(request.POST)
+        if form.is_valid():
+            new_comment = form.save(commit=False)
+            new_comment.user = request.user
+            new_comment.laptop = laptop
+            new_comment.save()
+            return redirect('product:laptop-detail', pk=pk)
+    else:
+        form = LaptopCommentForm()
+
+    context = {
+        'laptop': laptop,
+        'comments': comments,
+        'price_history': price_history,
+        'comment_stats': comment_stats,
+        'form': form,
+    }
+    return render(request, 'product/laptop_detail.html', context)
