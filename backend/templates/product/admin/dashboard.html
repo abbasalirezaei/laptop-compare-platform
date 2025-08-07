@@ -1,0 +1,59 @@
+<h1 class="mb-4">📊 Admin Dashboard</h1>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card p-3 shadow-sm">
+            <h5>Average Price</h5>
+            <p class="fs-4 text-primary">${{ avg_price|floatformat:2 }}</p>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3 shadow-sm">
+            <h5>Max RAM</h5>
+            <p class="fs-4 text-success">{{ max_ram }} GB</p>
+        </div>
+    </div>
+</div>
+
+<!-- Brand Chart -->
+<div class="card p-4 shadow-sm mb-4">
+    <h5 class="mb-3">Laptop Count by Brand</h5>
+    <canvas id="brandChart"></canvas>
+</div>
+
+<!-- Popular Laptops -->
+<div class="card p-4 shadow-sm">
+    <h5 class="mb-3">Top 5 Most Commented Laptops</h5>
+    <ul class="list-group">
+        {% for laptop in popular_laptops %}
+        <li class="list-group-item">
+            <strong>{{ laptop.name }}</strong> ({{ laptop.brand }}) — {{ laptop.comment_count }} comments
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const brandChart = document.getElementById('brandChart');
+    new Chart(brandChart, {
+        type: 'bar',
+        data: {
+            labels: [{% for item in brand_stats %}'{{ item.brand }}',{% endfor %}],
+            datasets: [{
+                label: 'Laptop Count',
+                data: [{% for item in brand_stats %}{{ item.count }},{% endfor %}],
+                backgroundColor: '#0d6efd'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Laptop Distribution by Brand'
+                }
+            }
+        }
+    });
+</script>

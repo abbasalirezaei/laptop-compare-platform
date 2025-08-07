@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.db.models import Q, Max, Min
+from django.db.models import Q, Max, Min, Count, Avg    
 from django.http import HttpResponse, HttpResponseBadRequest
 from .models import Laptop
 from django.utils.dateparse import parse_date
@@ -13,12 +13,12 @@ def laptop_list_view(request):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
 
-    # محاسبه بیشترین و کمترین قیمت برای اسلایدر
+    # Calculate max and min price for slider
     result = Laptop.objects.aggregate(Max('price'), Min('price'))
     price__max = result.get('price__max') or 0
     price__min = result.get('price__min') or 0
 
-    q = Q(is_active=True)  # فقط لپ‌تاپ‌های فعال
+    q = Q(is_active=True)
 
     if brand:
         q &= Q(brand__iexact=brand)
@@ -49,7 +49,7 @@ def laptop_list_view(request):
             q &= Q(created_at__date__lte=parsed_end)
 
     laptops = Laptop.objects.filter(q).order_by('-created_at')
-    sort_by = request.GET.get('sort_by', 'price')  # پیش‌فرض مرتب‌سازی بر اساس قیمت
+    sort_by = request.GET.get('sort_by', 'price')
     valid_sort_fields = ['price', '-price', 'ram', '-ram', 'cpu_score', '-cpu_score', 'created_at', '-created_at']
 
     if sort_by in valid_sort_fields:
@@ -66,7 +66,7 @@ def laptop_list_view(request):
         'start_date': start_date,
         'end_date': end_date,
         'sort_by': sort_by,
-        }
+    }
     return render(request, 'product/laptop_list.html', context)
 
 
@@ -75,16 +75,16 @@ def compare_laptops_view(request):
     id2 = request.GET.get('id2')
 
     if not id1 or not id2:
-        return HttpResponseBadRequest("لطفاً شناسه هر دو لپ‌تاپ را وارد کنید.")
+        return HttpResponseBadRequest("Please provide both laptop IDs.")
 
     if id1 == id2:
-        return HttpResponseBadRequest("نمی‌توان یک لپ‌تاپ را با خودش مقایسه کرد.")
+        return HttpResponseBadRequest("Cannot compare a laptop with itself.")
 
     try:
         laptop1 = get_object_or_404(Laptop, pk=int(id1))
         laptop2 = get_object_or_404(Laptop, pk=int(id2))
     except ValueError:
-        return HttpResponseBadRequest("شناسه‌ها باید عدد صحیح باشند.")
+        return HttpResponseBadRequest("IDs must be integers.")
 
     comparison_data = {
         'product1': laptop1,
@@ -105,3 +105,33 @@ def compare_laptops_view(request):
     }
 
     return render(request, 'product/compare.html', comparison_data)
+
+
+
+def admin_dashboard_view(request):
+    # Number of laptops by brand
+    brand_stats = (
+        Laptop.objects.values('brand')
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+
+    # Average price and maximum RAM
+    stats = Laptop.objects.aggregate(
+        avg_price=Avg('price'),
+        max_ram=Max('ram')
+    )
+
+    # Most popular laptops based on comment count
+    popular_laptops = (
+        Laptop.objects.annotate(comment_count=Count('comments'))
+        .order_by('-comment_count')[:5]
+    )
+
+    context = {
+        'brand_stats': brand_stats,
+        'avg_price': stats['avg_price'],
+        'max_ram': stats['max_ram'],
+        'popular_laptops': popular_laptops,
+    }
+    return render(request, 'product/admin/dashboard.html', context)
