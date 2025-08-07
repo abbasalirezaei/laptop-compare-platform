@@ -108,6 +108,21 @@ def compare_laptops_view(request):
 
 
 
+from django.shortcuts import render, get_object_or_404
+from .models import Laptop, LaptopComment, LaptopPriceHistory
+
+def laptop_detail_view(request, pk):
+    laptop = get_object_or_404(Laptop, pk=pk)
+    comments = laptop.comments.select_related('user').order_by('-created_at')
+    price_history = laptop.price_history.order_by('recorded_at')
+
+    context = {
+        'laptop': laptop,
+        'comments': comments,
+        'price_history': price_history,
+    }
+    return render(request, 'product/laptop_detail.html', context)
+
 def admin_dashboard_view(request):
     # Number of laptops by brand
     brand_stats = (

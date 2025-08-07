@@ -1,0 +1,51 @@
+<h2>{{ laptop.brand }} - {{ laptop.name }}</h2>
+<p><strong>Price:</strong> ${{ laptop.price }}</p>
+<p><strong>RAM:</strong> {{ laptop.ram }} GB | <strong>Storage:</strong> {{ laptop.storage }} GB</p>
+<p><strong>CPU:</strong> {{ laptop.cpu_model }} ({{ laptop.cpu_score }})</p>
+<p><strong>Battery:</strong> {{ laptop.battery_capacity }} mAh</p>
+
+<hr>
+
+<h4>💬 Comments</h4>
+<ul class="list-group mb-4">
+    {% for comment in comments %}
+    <li class="list-group-item">
+        <strong>{{ comment.user.username }}</strong> said on {{ comment.created_at|date:"Y-m-d" }}:<br>
+        {{ comment.content }}
+    </li>
+    {% empty %}
+    <li class="list-group-item text-muted">No comments yet.</li>
+    {% endfor %}
+</ul>
+
+<hr>
+
+<h4>📈 Price History</h4>
+<canvas id="priceChart"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('priceChart');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [{% for entry in price_history %}'{{ entry.recorded_at|date:"Y-m-d" }}',{% endfor %}],
+            datasets: [{
+                label: 'Price Over Time',
+                data: [{% for entry in price_history %}{{ entry.price }},{% endfor %}],
+                borderColor: '#0d6efd',
+                fill: false,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Price Trend'
+                }
+            }
+        }
+    });
+</script>
