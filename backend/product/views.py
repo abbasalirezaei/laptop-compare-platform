@@ -1,10 +1,11 @@
 from django.shortcuts import render
 from django.db.models import Q, Max, Min
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from .models import Laptop
+from django.utils.dateparse import parse_date
+from django.shortcuts import get_object_or_404
 
 def laptop_list_view(request):
-    # دریافت پارامترهای فیلتر
     brand = request.GET.get('brand')
     search_query = request.GET.get('search_query')
     price_lte = request.GET.get('price_lte')
@@ -14,58 +15,76 @@ def laptop_list_view(request):
 
     # محاسبه بیشترین و کمترین قیمت برای اسلایدر
     result = Laptop.objects.aggregate(Max('price'), Min('price'))
-    price__max = result.get('price__max', 0)
-    price__min = result.get('price__min', 0)
+    price__max = result.get('price__max') or 0
+    price__min = result.get('price__min') or 0
 
-    laptops = Laptop.objects.all()
-    q = Q()
+    q = Q(is_active=True)  # فقط لپ‌تاپ‌های فعال
 
     if brand:
         q &= Q(brand__iexact=brand)
+
     if search_query:
         q &= Q(name__icontains=search_query)
+
     if price_lte:
         try:
             q &= Q(price__lte=float(price_lte))
-        except (ValueError, TypeError):
+        except ValueError:
             pass
+
     if price_gte:
         try:
             q &= Q(price__gte=float(price_gte))
-        except (ValueError, TypeError):
+        except ValueError:
             pass
-    if start_date:
-        q &= Q(created_at__gte=start_date)
-    if end_date:
-        q &= Q(created_at__lte=end_date)
 
-    laptops = laptops.filter(q)
+    if start_date:
+        parsed_start = parse_date(start_date)
+        if parsed_start:
+            q &= Q(created_at__date__gte=parsed_start)
+
+    if end_date:
+        parsed_end = parse_date(end_date)
+        if parsed_end:
+            q &= Q(created_at__date__lte=parsed_end)
+
+    laptops = Laptop.objects.filter(q).order_by('-created_at')
+    sort_by = request.GET.get('sort_by', 'price')  # پیش‌فرض مرتب‌سازی بر اساس قیمت
+    valid_sort_fields = ['price', '-price', 'ram', '-ram', 'cpu_score', '-cpu_score', 'created_at', '-created_at']
+
+    if sort_by in valid_sort_fields:
+        laptops = laptops.order_by(sort_by)
 
     context = {
         'laptops': laptops,
         'price__max': price__max,
         'price__min': price__min,
         'price_lte': price_lte,
-    }
+        'price_gte': price_gte,
+        'search_query': search_query,
+        'brand': brand,
+        'start_date': start_date,
+        'end_date': end_date,
+        'sort_by': sort_by,
+        }
     return render(request, 'product/laptop_list.html', context)
 
-
-
-
-
-from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponse
-from .models import Laptop
 
 def compare_laptops_view(request):
     id1 = request.GET.get('id1')
     id2 = request.GET.get('id2')
 
     if not id1 or not id2:
-        return HttpResponse("Please provide both laptop IDs", status=400)
+        return HttpResponseBadRequest("لطفاً شناسه هر دو لپ‌تاپ را وارد کنید.")
 
-    laptop1 = get_object_or_404(Laptop, pk=id1)
-    laptop2 = get_object_or_404(Laptop, pk=id2)
+    if id1 == id2:
+        return HttpResponseBadRequest("نمی‌توان یک لپ‌تاپ را با خودش مقایسه کرد.")
+
+    try:
+        laptop1 = get_object_or_404(Laptop, pk=int(id1))
+        laptop2 = get_object_or_404(Laptop, pk=int(id2))
+    except ValueError:
+        return HttpResponseBadRequest("شناسه‌ها باید عدد صحیح باشند.")
 
     comparison_data = {
         'product1': laptop1,
@@ -78,6 +97,11 @@ def compare_laptops_view(request):
         'cpu_score_diff': abs(laptop1.cpu_score - laptop2.cpu_score),
         'battery_diff': abs(laptop1.battery_capacity - laptop2.battery_capacity),
         'same_brand': laptop1.brand == laptop2.brand,
+        'gpu_match': (
+            laptop1.gpu_model == laptop2.gpu_model
+            if laptop1.gpu_model and laptop2.gpu_model
+            else None
+        ),
     }
 
     return render(request, 'product/compare.html', comparison_data)

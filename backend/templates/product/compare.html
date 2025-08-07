@@ -48,12 +48,11 @@
 
     <h2>Compare Two Laptops (<a href="{% url 'product:home' %}">Back to Laptop List</a>)</h2>
 
-
     <table>
         <tr>
             <th>Feature</th>
-            <th>{{ product1.name }}</th>
-            <th>{{ product2.name }}</th>
+            <th>{{ product1.brand }} - {{ product1.name }}</th>
+            <th>{{ product2.brand }} - {{ product2.name }}</th>
         </tr>
         <tr>
             <td>Price</td>
@@ -85,23 +84,30 @@
             <td>{{ product1.cpu_score }}</td>
             <td>{{ product2.cpu_score }}</td>
         </tr>
+        {% if product1.gpu_model and product2.gpu_model %}
+        <tr>
+            <td>GPU</td>
+            <td>{{ product1.gpu_model }}</td>
+            <td>{{ product2.gpu_model }}</td>
+        </tr>
+        {% endif %}
     </table>
 
-    <!-- RAM - Bar Chart -->
+    <!-- Charts -->
     <h3>RAM Comparison</h3>
     <canvas id="ramChart"></canvas>
 
-    <!-- Battery - Line Chart -->
     <h3>Battery Comparison</h3>
     <canvas id="batteryChart"></canvas>
 
-    <!-- Storage - Pie Chart -->
     <h3>Storage Comparison</h3>
     <canvas id="storageChart"></canvas>
 
-    <!-- CPU Score - Polar Area Chart -->
     <h3>CPU Score Comparison</h3>
     <canvas id="cpuChart"></canvas>
+
+    <h3>Price Comparison</h3>
+    <canvas id="priceChart"></canvas>
 
     <script>
         function revealChart(id, config) {
@@ -119,14 +125,14 @@
             observer.observe(canvas);
         }
 
-        // RAM - Bar Chart
+        // RAM
         revealChart('ramChart', {
             type: 'bar',
             data: {
-                labels: ['{{ product1.name }}', '{{ product2.name }}'],
+                labels: ['{{ product1.name|escapejs }}', '{{ product2.name|escapejs }}'],
                 datasets: [{
                     label: 'RAM (GB)',
-                    data: [{{ product1.ram }}, {{ product2.ram }}],
+                    data: [{{ product1.ram|escapejs }}, {{ product2.ram|escapejs }}],
                     backgroundColor: ['#4e79a7', '#f28e2b']
                 }]
             },
@@ -142,14 +148,14 @@
             }
         });
 
-        // Battery - Line Chart
+        // Battery
         revealChart('batteryChart', {
             type: 'line',
             data: {
-                labels: ['{{ product1.name }}', '{{ product2.name }}'],
+                labels: ['{{ product1.name|escapejs }}', '{{ product2.name|escapejs }}'],
                 datasets: [{
                     label: 'Battery (mAh)',
-                    data: [{{ product1.battery_capacity }}, {{ product2.battery_capacity }}],
+                    data: [{{ product1.battery_capacity|escapejs }}, {{ product2.battery_capacity|escapejs }}],
                     borderColor: '#59a14f',
                     fill: false,
                     tension: 0.3
@@ -167,14 +173,14 @@
             }
         });
 
-        // Storage - Pie Chart
+        // Storage
         revealChart('storageChart', {
             type: 'pie',
             data: {
-                labels: ['{{ product1.name }}', '{{ product2.name }}'],
+                labels: ['{{ product1.name|escapejs }}', '{{ product2.name|escapejs }}'],
                 datasets: [{
                     label: 'Storage (GB)',
-                    data: [{{ product1.storage }}, {{ product2.storage }}],
+                    data: [{{ product1.storage|escapejs }}, {{ product2.storage|escapejs }}],
                     backgroundColor: ['#e15759', '#76b7b2']
                 }]
             },
@@ -190,14 +196,14 @@
             }
         });
 
-        // CPU Score - Polar Area Chart
+        // CPU Score
         revealChart('cpuChart', {
             type: 'polarArea',
             data: {
-                labels: ['{{ product1.name }}', '{{ product2.name }}'],
+                labels: ['{{ product1.name|escapejs }}', '{{ product2.name|escapejs }}'],
                 datasets: [{
                     label: 'CPU Score',
-                    data: [{{ product1.cpu_score }}, {{ product2.cpu_score }}],
+                    data: [{{ product1.cpu_score|escapejs }}, {{ product2.cpu_score|escapejs }}],
                     backgroundColor: ['#edc948', '#b07aa1']
                 }]
             },
@@ -209,6 +215,36 @@
                 animation: {
                     duration: 1500,
                     easing: 'easeOutElastic'
+                }
+            }
+        });
+
+        // Price Comparison
+        revealChart('priceChart', {
+            type: 'bar',
+            data: {
+                labels: ['{{ product1.name|escapejs }}', '{{ product2.name|escapejs }}'],
+                datasets: [
+                    {
+                        label: 'Original Price',
+                        data: [{{ product1.price|escapejs }}, {{ product2.price|escapejs }}],
+                        backgroundColor: '#bab0ab'
+                    },
+                    {
+                        label: 'Discounted Price',
+                        data: [{{ product1.discounted_price|escapejs }}, {{ product2.discounted_price|escapejs }}],
+                        backgroundColor: '#ff9da7'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: { display: true, text: 'Price vs Discount Comparison' }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutExpo'
                 }
             }
         });
